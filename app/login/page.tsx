@@ -1,189 +1,228 @@
 "use client"
 
 import { useState } from "react"
-import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Shield, LogIn, ArrowRight, FileText, Wallet, CheckCircle } from "lucide-react"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { HexagonIcon, Wallet, Shield, UserCircle } from "lucide-react"
 import { useWeb3 } from "@/components/web3-provider"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { useToast } from "@/components/ui/use-toast"
+import Link from "next/link"
 
 export default function LoginPage() {
   const router = useRouter()
   const { connectWallet, isConnected } = useWeb3()
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-  })
-  const [loading, setLoading] = useState(false)
-  const [step, setStep] = useState<"wallet" | "credentials">("wallet")
-  const [walletConnected, setWalletConnected] = useState(false)
+  const { toast } = useToast()
+  const [isConnecting, setIsConnecting] = useState(false)
+  const [selectedRole, setSelectedRole] = useState<"user" | "officer" | "admin">("user")
+  const [email, setEmail] = useState("")
+  const [otp, setOtp] = useState("")
+  const [otpSent, setOtpSent] = useState(false)
 
-  const handleWalletConnect = async () => {
-    setLoading(true)
+  const handleWalletConnect = async (type: "metamask" | "walletconnect") => {
+    setIsConnecting(true)
     try {
-      const success = await connectWallet("metamask")
+      const success = await connectWallet(type, selectedRole)
       if (success) {
-        setWalletConnected(true)
-        setStep("credentials")
+        // Redirect based on role
+        const redirectPath = selectedRole === "user" ? "/complaint" : selectedRole === "officer" ? "/officer" : "/admin"
+
+        router.push(redirectPath)
       }
     } finally {
-      setLoading(false)
+      setIsConnecting(false)
     }
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!walletConnected) {
+  const handleSendOtp = () => {
+    if (!email || !email.includes("@")) {
+      toast({
+        title: "Invalid Email",
+        description: "Please enter a valid email address",
+        variant: "destructive",
+      })
       return
     }
-    setLoading(true)
-    // Add your login logic here
-    // For now, we'll just simulate a delay
-    setTimeout(() => {
-      setLoading(false)
-      router.push("/dashboard")
-    }, 1500)
+
+    // Simulate OTP sending
+    toast({
+      title: "OTP Sent",
+      description: "A one-time password has been sent to your email",
+    })
+    setOtpSent(true)
+  }
+
+  const handleEmailLogin = async () => {
+    if (!otp || otp.length < 6) {
+      toast({
+        title: "Invalid OTP",
+        description: "Please enter a valid one-time password",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsConnecting(true)
+    try {
+      // Simulate email login
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+
+      const success = await connectWallet("none", selectedRole)
+      if (success) {
+        // Redirect based on role
+        const redirectPath = selectedRole === "user" ? "/complaint" : selectedRole === "officer" ? "/officer" : "/admin"
+
+        router.push(redirectPath)
+      }
+    } finally {
+      setIsConnecting(false)
+    }
   }
 
   return (
-    <div className="min-h-screen relative">
-      {/* Background Grid */}
-      <div className="absolute inset-0 smooth-grid" />
-
-      <div className="container mx-auto px-4 py-20 relative z-10">
-        <div className="max-w-md mx-auto">
-          <div className="text-center space-y-6 mb-8">
-            <Badge className="bg-orange/20 text-orange border-orange/50 px-6 py-2 text-sm font-medium">
-              <FileText className="h-4 w-4 mr-2" />
-              Web3 Evidence Vault
-            </Badge>
-            <h1 className="text-4xl font-bold tracking-tight gradient-text">Welcome Back</h1>
-            <p className="text-cream-light">
-              Access your decentralized evidence management platform
-            </p>
-          </div>
-
-          <Card className="glassmorphism-card">
-            <CardHeader>
-              <CardTitle className="text-2xl font-bold text-center gradient-text">Login</CardTitle>
-              <CardDescription className="text-center text-cream-light">
-                {step === "wallet" 
-                  ? "First, connect your wallet" 
-                  : "Now, enter your credentials"}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {step === "wallet" ? (
-                <div className="space-y-6">
-                  <div className="text-center space-y-4">
-                    <div className="flex justify-center">
-                      <div className="p-4 rounded-full bg-orange/10">
-                        <Wallet className="h-8 w-8 text-orange" />
-                      </div>
-                    </div>
-                    <p className="text-cream-light">
-                      Connect your wallet to verify your Web3 identity
-                    </p>
-                  </div>
-
-                  <Button
-                    onClick={handleWalletConnect}
-                    className="w-full modern-button text-lg py-6 pulse-glow"
-                    disabled={loading}
-                  >
-                    <Wallet className="mr-2 h-5 w-5" />
-                    {loading ? "Connecting..." : "Connect Wallet"}
-                  </Button>
-                </div>
-              ) : (
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  <div className="space-y-4">
-                    <div>
-                      <Input
-                        type="email"
-                        placeholder="Email"
-                        className="modern-input"
-                        value={formData.email}
-                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                        required
-                      />
-                    </div>
-                    <div>
-                      <Input
-                        type="password"
-                        placeholder="Password"
-                        className="modern-input"
-                        value={formData.password}
-                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        id="remember"
-                        className="rounded border-orange/50 bg-orange/10 text-orange focus:ring-orange"
-                      />
-                      <label htmlFor="remember" className="text-sm text-cream-light">
-                        Remember me
-                      </label>
-                    </div>
-                    <Link href="/forgot-password" className="text-sm text-orange hover:text-orange/80 transition-colors">
-                      Forgot password?
-                    </Link>
-                  </div>
-
-                  <Button
-                    type="submit"
-                    className="w-full modern-button text-lg py-6 pulse-glow"
-                    disabled={loading}
-                  >
-                    <LogIn className="mr-2 h-5 w-5" />
-                    {loading ? "Accessing..." : "Access Vault"}
-                  </Button>
-                </form>
-              )}
-
-              <div className="mt-6 text-center space-y-4">
-                <p className="text-sm text-cream-light">
-                  Don't have an account?{" "}
-                  <Link href="/register" className="text-orange hover:text-orange/80 transition-colors">
-                    Create account
-                  </Link>
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Security Features */}
-          <div className="mt-8 grid grid-cols-2 gap-4">
-            <div className="text-center space-y-2 p-4 rounded-xl glassmorphism">
-              <Shield className="h-6 w-6 mx-auto text-orange" />
-              <div className="text-sm text-sage-green">Secure Access</div>
-            </div>
-            <div className="text-center space-y-2 p-4 rounded-xl glassmorphism">
-              <FileText className="h-6 w-6 mx-auto text-cyan-bright" />
-              <div className="text-sm text-sage-green">IPFS Backed</div>
-            </div>
-          </div>
-
-          {/* Back to Home */}
-          <div className="mt-8 text-center">
-            <Link href="/">
-              <Button variant="ghost" className="text-cream-light hover:text-orange">
-                <ArrowRight className="mr-2 h-4 w-4 rotate-180" />
-                Back to Home
-              </Button>
-            </Link>
-          </div>
+    <div className="min-h-screen flex flex-col">
+      <header className="border-b border-white/10 backdrop-blur-sm">
+        <div className="container flex items-center h-16">
+          <Link href="/" className="flex items-center gap-2">
+            <HexagonIcon className="h-6 w-6 text-purple-500" />
+            <span className="text-lg font-bold tracking-tight neon-text">BlockEvid 3.0</span>
+          </Link>
         </div>
-      </div>
+      </header>
+
+      <main className="flex-1 container flex items-center justify-center py-12">
+        <Card className="w-full max-w-md glassmorphism border-purple-500/20">
+          <CardHeader className="text-center">
+            <CardTitle className="text-2xl neon-text">Secure Authentication</CardTitle>
+            <CardDescription>Connect your wallet or use email to access BlockEvid 3.0</CardDescription>
+          </CardHeader>
+
+          <CardContent>
+            <div className="mb-6">
+              <Label>Select Your Role</Label>
+              <RadioGroup
+                defaultValue="user"
+                className="grid grid-cols-3 gap-4 mt-2"
+                onValueChange={(value) => setSelectedRole(value as "user" | "officer" | "admin")}
+              >
+                <div>
+                  <RadioGroupItem value="user" id="user" className="peer sr-only" />
+                  <Label
+                    htmlFor="user"
+                    className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-transparent p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-purple-500 peer-data-[state=checked]:bg-purple-950/20 [&:has([data-state=checked])]:border-primary"
+                  >
+                    <UserCircle className="mb-2 h-6 w-6" />
+                    User
+                  </Label>
+                </div>
+
+                <div>
+                  <RadioGroupItem value="officer" id="officer" className="peer sr-only" />
+                  <Label
+                    htmlFor="officer"
+                    className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-transparent p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-blue-500 peer-data-[state=checked]:bg-blue-950/20 [&:has([data-state=checked])]:border-primary"
+                  >
+                    <Shield className="mb-2 h-6 w-6" />
+                    Officer
+                  </Label>
+                </div>
+
+                <div>
+                  <RadioGroupItem value="admin" id="admin" className="peer sr-only" />
+                  <Label
+                    htmlFor="admin"
+                    className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-transparent p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-green-500 peer-data-[state=checked]:bg-green-950/20 [&:has([data-state=checked])]:border-primary"
+                  >
+                    <Shield className="mb-2 h-6 w-6" />
+                    Admin
+                  </Label>
+                </div>
+              </RadioGroup>
+            </div>
+
+            <Tabs defaultValue="wallet" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="wallet">Wallet</TabsTrigger>
+                <TabsTrigger value="email">Email + OTP</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="wallet" className="space-y-4 mt-4">
+                <Button
+                  variant="outline"
+                  className="w-full justify-start border-purple-500/30 hover:border-purple-500 hover:bg-purple-950/30"
+                  onClick={() => handleWalletConnect("metamask")}
+                  disabled={isConnecting}
+                >
+                  <Wallet className="mr-2 h-4 w-4" />
+                  {isConnecting ? "Connecting..." : "Connect with MetaMask"}
+                </Button>
+
+                <Button
+                  variant="outline"
+                  className="w-full justify-start border-blue-500/30 hover:border-blue-500 hover:bg-blue-950/30"
+                  onClick={() => handleWalletConnect("walletconnect")}
+                  disabled={isConnecting}
+                >
+                  <Wallet className="mr-2 h-4 w-4" />
+                  {isConnecting ? "Connecting..." : "Connect with WalletConnect"}
+                </Button>
+              </TabsContent>
+
+              <TabsContent value="email" className="space-y-4 mt-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email Address</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="your@email.com"
+                      className="flex-1"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      disabled={otpSent || isConnecting}
+                    />
+                    <Button onClick={handleSendOtp} disabled={otpSent || isConnecting || !email}>
+                      Send OTP
+                    </Button>
+                  </div>
+                </div>
+
+                {otpSent && (
+                  <div className="space-y-2">
+                    <Label htmlFor="otp">One-Time Password</Label>
+                    <Input
+                      id="otp"
+                      type="text"
+                      placeholder="Enter OTP"
+                      value={otp}
+                      onChange={(e) => setOtp(e.target.value)}
+                      disabled={isConnecting}
+                    />
+                  </div>
+                )}
+
+                {otpSent && (
+                  <Button
+                    className="w-full bg-gradient-to-r from-purple-600 to-blue-500 hover:from-purple-700 hover:to-blue-600"
+                    onClick={handleEmailLogin}
+                    disabled={isConnecting || !otp}
+                  >
+                    {isConnecting ? "Authenticating..." : "Login"}
+                  </Button>
+                )}
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+
+          <CardFooter className="flex justify-center border-t border-white/10 pt-4">
+            <p className="text-xs text-gray-400">By connecting, you agree to our Terms of Service and Privacy Policy</p>
+          </CardFooter>
+        </Card>
+      </main>
     </div>
   )
 }

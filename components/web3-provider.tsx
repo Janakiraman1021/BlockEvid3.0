@@ -1,7 +1,7 @@
 "use client"
 
 import { createContext, useContext, useEffect, useState } from "react"
-import { ethers } from "ethers"
+import { BrowserProvider, JsonRpcSigner } from "ethers"
 
 interface Web3ContextType {
   connectWallet: (type: "metamask" | "walletconnect") => Promise<boolean>
@@ -9,8 +9,8 @@ interface Web3ContextType {
   isConnected: boolean
   address: string | null
   chainId: number | null
-  provider: ethers.providers.Web3Provider | null
-  signer: ethers.Signer | null
+  provider: BrowserProvider | null
+  signer: JsonRpcSigner | null
   error: string | null
 }
 
@@ -29,8 +29,8 @@ export function Web3Provider({ children }: { children: React.ReactNode }) {
   const [isConnected, setIsConnected] = useState(false)
   const [address, setAddress] = useState<string | null>(null)
   const [chainId, setChainId] = useState<number | null>(null)
-  const [provider, setProvider] = useState<ethers.providers.Web3Provider | null>(null)
-  const [signer, setSigner] = useState<ethers.Signer | null>(null)
+  const [provider, setProvider] = useState<BrowserProvider | null>(null)
+  const [signer, setSigner] = useState<JsonRpcSigner | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   // Check if MetaMask is installed
@@ -47,14 +47,14 @@ export function Web3Provider({ children }: { children: React.ReactNode }) {
     if (!checkMetaMask()) return
 
     try {
-      const provider = new ethers.providers.Web3Provider(window.ethereum)
-      const signer = provider.getSigner()
+      const provider = new BrowserProvider(window.ethereum)
+      const signer = await provider.getSigner()
       const network = await provider.getNetwork()
       const address = await signer.getAddress()
 
       setProvider(provider)
       setSigner(signer)
-      setChainId(network.chainId)
+      setChainId(Number(network.chainId))
       setAddress(address)
       setIsConnected(true)
       setError(null)
